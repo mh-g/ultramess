@@ -1,5 +1,5 @@
 # ultramess
-Program to access two Ultramess (Sharky 775) via ZVEI interfaces
+Program to access two Ultramess (Sharky 775) and one Logarex LK13B via ZVEI interfaces
 
 System environment:
 - Raspberry Pico W
@@ -10,8 +10,12 @@ Wiring diagram:
 - Pico W pin <-> external
 - 1 (GP0) <-> Volkszähler #0, TX
 - 2 (GP1) <-> Volkszähler #0, RX
-- 3 (GND) <-> Volkszähler #0, GND, and Volkszähler #1, GND
-- 36 (3V3OUT) <-> Volkszähler #0, VCC, and Volkszähler #1, VCC
+- 3 (GND) <-> Volkszähler #0, GND, and Volkszähler #1, GND, and Volkszähler #2, GND
+- 6 (GP4) <-> Volkszähler #1, TX
+- 7 (GP5) <-> Volkszähler #1, RX
+- 16 (GP12) <-> Volkszähler #2, TX
+- 17 (GP13) <-> Volkszähler #2, RX
+- 36 (3V3OUT) <-> Volkszähler #0, VCC, and Volkszähler #1, VCC, and Volkszähler #2, VCC
 
 Relevant documentation:
 - https://www.molline.de/fileadmin/content/content/Bilder/produkte_waerme_kaelte/Kompakt_Ultraschall/Ultramess_H_Waermezaehler/M-Bus_Protokoll_Ultramess_H.pdf
@@ -21,8 +25,7 @@ Relevant documentation:
 This is work in progress.
 
 Steps to follow:
-- data transfer via MQTT
-- possibly extension with a third ZVEI interface to an LOGAREX LK13B to extract electrical power data
+- None
 
 Steps most likely not to follow:
 - data parsing on Pico W, but on a Raspberry Pi with the database intended for storing the data
