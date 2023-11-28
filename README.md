@@ -1,5 +1,5 @@
 # ultramess
-Program to access two Ultramess (Sharky 775) and one Logarex LK13B via ZVEI interfaces
+Program to access two Ultramess (Sharky 775) and one Logarex LK13B via ZVEI interfaces and publish the results as MQTT topics /utilities/heat/in, /utilities/heat/out, /utilities/electricity.
 
 System environment:
 - Raspberry Pico W
