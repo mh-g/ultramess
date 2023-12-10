@@ -3,6 +3,7 @@ import time
 import binascii
 import network
 from simple import MQTTClient
+import onewire, ds18x20
 
 # contains the local WIFI credentials
 import credentials
@@ -31,14 +32,11 @@ def mbus_checksum(data, skip):
 def check_result(which, ser):
     result_char = ser.read(1)
     if result_char == b'\xe5':
-        # print(f'!!!!! {which} got e5')
         return True
     else:
         if result_char is None:
-            # print(f'!!!!! {which} got None')
             return True
         else:
-            print(f'{get_topic_name(which)}: bad answer: {binascii.hexlify(bytearray(result_char), " ")}')
             return False
 
 
@@ -49,20 +47,15 @@ def get_data_ultramess(which):
     tx_unused = Pin(get_pins(1 - which)['tx'], Pin.IN)
     rx_unused = Pin(get_pins(1 - which)['rx'], Pin.IN)
 
-    # print(ser)
-
     # 2.5: at 2400, 8N1 to send 2.2s of alternating bits
     ser.write(b'\x55' * 528)
     ser.flush()
 
     # 2.5: wait 11-330 bit times (here: 170 chosen)
-    # time.sleep(2.0) # 2.0s sleep -> 0.8s break -> 1.2s until the buffer is empty ...
     time.sleep(1.2 + 170.0 / 2400.0)
-    # time.sleep(170.0 / 2400.0)
 
     # 2.3: change parity
     ser.init(parity=0)  # 0=even
-    # print(ser)
 
     # 2.7.1: do selection, use jokers for serial, manufacturer, ID, medium
     # 17 chars, 0.08s outgoing
@@ -94,8 +87,7 @@ def get_data_ultramess(which):
     # result arrives after 0.07s, is 0.71s long (ca. 173 bytes)
     answer = ser.read(200)  # 173 bytes plus some reserves
     if answer is None:
-        print('No data received')
-        mqtt_publish(get_topic_name(which), 'No data.')
+        mqtt_publish(get_topic_name(which), '\0')
     else:
         # debug output (hex dump) of received data
         print(f'user data bytes: {binascii.hexlify(bytearray(answer), " ")}')
@@ -121,16 +113,29 @@ def get_data_ultramess(which):
 def get_data_logarex(ser, which):
     result = ser.read()
     if result is None:
-        print('No data received')
-        mqtt_publish(which, 'No data.')
+        mqtt_publish(which, '\0')
     else:
         # debug output (hex dump) of received data
-        print(f'user data bytes: {binascii.hexlify(bytearray(result), " ")}')
         mqtt_publish(which, result)
 
     # return bytes received
     return result
 
+
+# === get_temperature =============================================================================
+def get_temperature():
+    sensors = ds18x20.DS18X20(onewire.OneWire(machine.Pin(28)))
+    roms = sensors.scan()
+    sensors.convert_temp()
+    time.sleep_ms(750)
+    if len(roms) == 0:
+        mqtt_publish('temperature', '\0')
+        return None
+    else:
+        for rom in roms:
+            mqtt_publish(f'temperature/{binascii.hexlify (rom).decode("utf-8")}', str(sensors.read_temp(rom)))
+            return rom
+       
 
 # === wlan_connect ================================================================================
 def wlan_connect():
@@ -166,13 +171,10 @@ def mqtt_connect():
 def mqtt_publish(which, data):
     try:
         client = mqtt_connect()
-        print(f'{mqttTopic}{which}')
         client.publish(f'{mqttTopic}{which}', data)
         client.disconnect()
-        print('Published and closed MQTT connection.')
     except OSError:
-        print()
-        print('Error: No MQTT connection.')
+        pass
 
 
 # === main ========================================================================================
@@ -206,6 +208,9 @@ while True:
     # electric power is on a different UART
     print('Reading Logarex')
     result = get_data_logarex(ser_logarex, 'electricity')
+    
+    print('Reading temperature')
+    result = get_temperature()
 
     print('Pausing ...')
     time.sleep(0.25)
